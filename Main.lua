@@ -41,7 +41,7 @@ local Button = Tab:Button({
     Locked = false,
     Callback = function()
         for _, obj in ipairs(workspace:GetDescendants()) do
-		if obj:IsA("Model") and obj:FindFirstChildOfClass("Humanoid") then
+		if obj:IsA("Model") and obj:FindFirstChildOfClass("Humanoid") and obj.Name ~= "Prueba232" then
 
                     print("Character encontrado: " .. obj.Name)
 
@@ -52,6 +52,7 @@ local Button = Tab:Button({
                     Callback = function()
 
                     local npc = obj:clone()
+                    npc.Name = "Prueba232"
                     npc.Parent = workspace
                     game.Players.LocalPlayer.Character = npc
                     workspace.Camera.CameraSubject = npc
