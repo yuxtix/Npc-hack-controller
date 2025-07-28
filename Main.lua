@@ -34,14 +34,14 @@ local Tab = Window:Tab({
 
 
 
-
 local Button = Tab:Button({
     Title = "Scan",
     Desc = "Scan all the Characters",
     Locked = false,
     Callback = function()
+        local realcharacter = game.Players.LocalPlayer.Character
         for _, obj in ipairs(workspace:GetDescendants()) do
-		if obj:IsA("Model") and obj:FindFirstChildOfClass("Humanoid") and obj.Name ~= "Prueba232" then
+		if obj:IsA("Model") and obj:FindFirstChildOfClass("Humanoid")  then
 
                     print("Character encontrado: " .. obj.Name)
 
@@ -57,6 +57,9 @@ local Button = Tab:Button({
                     game.Players.LocalPlayer.Character = npc
                     workspace.Camera.CameraSubject = npc
                     npc.Humanoid.WalkSpeed = 16
+                    local anim = realcharacter.Animate:clone()
+                    anim.Parent = npc
+
 
                      end
                     })
