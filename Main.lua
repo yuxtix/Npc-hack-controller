@@ -157,3 +157,58 @@ TabMain:Button({
         clones = {}
     end
 })
+
+-- ------------------------- FOLLOW PLAYER CAMINANDO -------------------------
+
+local followEnabled = false
+
+local function FollowPlayerWalking()
+    task.spawn(function()
+        while followEnabled do
+            local player = game.Players.LocalPlayer
+            local char = player.Character
+
+            if char and char:FindFirstChild("HumanoidRootPart") then
+                local playerRoot = char.HumanoidRootPart
+
+                for _, clone in ipairs(clones) do
+                    if clone and clone.Parent and clone:FindFirstChild("Humanoid") and clone:FindFirstChild("HumanoidRootPart") then
+                        
+                        local cloneHum = clone.Humanoid
+                        local cloneRoot = clone.HumanoidRootPart
+
+                        -- Posición a seguir (atrás del jugador, mismo suelo)
+                        local targetPos = playerRoot.Position
+                            - playerRoot.CFrame.LookVector * 6
+                            + playerRoot.CFrame.RightVector * 3
+
+                        -- Mantenerse pegado al suelo
+                        targetPos = Vector3.new(targetPos.X, cloneRoot.Position.Y, targetPos.Z)
+
+                        -- Camino real (sin volar)
+                        cloneHum:MoveTo(targetPos)
+                    end
+                end
+            end
+
+            task.wait(0.15)
+        end
+    end)
+end
+
+
+-- 🔘 BOTÓN PARA ACTIVAR/DESACTIVAR
+TabMain:Button({
+    Title = "Toggle Follow (Walking)",
+    Desc = "Los clones siguen al jugador caminando",
+    Locked = false,
+    Callback = function()
+        followEnabled = not followEnabled
+        if followEnabled then
+            print("FOLLOW CAMINANDO ACTIVADO")
+            FollowPlayerWalking()
+        else
+            print("FOLLOW CAMINANDO DESACTIVADO")
+        end
+    end
+})
