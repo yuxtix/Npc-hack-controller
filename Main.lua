@@ -1,5 +1,6 @@
 local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
-WindUI:GetTransparency(true)
+
+
 
 local Window = WindUI:CreateWindow({
     Title = "Controller avatar",
@@ -13,7 +14,7 @@ local Window = WindUI:CreateWindow({
     SideBarWidth = 200,
     Background = "",
     BackgroundImageTransparency = 0.42,
-    HideSearchBar = true,
+    HideSearchBar = false,
     ScrollBarEnabled = false,
     User = {
         Enabled = true,
@@ -22,6 +23,20 @@ local Window = WindUI:CreateWindow({
             print("clicked")
         end,
     },
+})
+
+Window:EditOpenButton({
+    Title = "Npc Controller",
+    Icon = "monitor",
+    CornerRadius = UDim.new(0,16),
+    StrokeThickness = 2,
+    Color = ColorSequence.new( -- gradient
+        Color3.fromHex("FF0F7B"), 
+        Color3.fromHex("F89B29")
+    ),
+    OnlyMobile = false,
+    Enabled = true,
+    Draggable = true,
 })
 
 local TabMain = Window:Tab({
@@ -35,6 +50,8 @@ local TabNormal = Window:Tab({
     Icon = "bird",
     Locked = false,
 })
+
+
 
 local clones = {} -- Para almacenar clones creados
 
