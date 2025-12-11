@@ -229,3 +229,150 @@ TabMain:Button({
         end
     end
 })
+-- =========================
+--     TAB DE NPC CONTROL
+-- =========================
+
+local TabNPC = Window:Tab({
+    Title = "NPC Control",
+    Icon = "user",
+    Locked = false,
+})
+
+local selectedNPC = nil
+local followRunning = false
+
+
+-- Función para resaltar el NPC seleccionado
+local function HighlightNPC(npc)
+    if not npc then return end
+
+    local hl = Instance.new("Highlight")
+    hl.FillColor = Color3.fromRGB(255, 200, 0)
+    hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+    hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    hl.Parent = npc
+
+    task.delay(1, function()
+        if hl then
+            hl:Destroy()
+        end
+    end)
+end
+
+
+-- Seleccionar NPC desde el juego con mouse
+TabNPC:Button({
+    Title = "Select NPC (Click en uno)",
+    Desc = "Haz click en un NPC para seleccionarlo",
+    Callback = function()
+        local player = game.Players.LocalPlayer
+        local mouse = player:GetMouse()
+
+        mouse.Button1Down:Connect(function()
+            local target = mouse.Target
+            if not target then return end
+
+            local npc = target:FindFirstAncestorOfClass("Model")
+            if npc and npc:FindFirstChildOfClass("Humanoid") then
+                selectedNPC = npc
+                print("NPC seleccionado:", npc.Name)
+                HighlightNPC(npc)
+            end
+        end)
+    end
+})
+
+
+-- FOLLOW SYSTEM
+local function FollowNPC()
+    task.spawn(function()
+        while followRunning do
+            task.wait(0.1)
+
+            if not selectedNPC then continue end
+            if not selectedNPC:FindFirstChild("HumanoidRootPart") then continue end
+
+            local char = game.Players.LocalPlayer.Character
+            if not char or not char:FindFirstChild("HumanoidRootPart") then continue end
+
+            local npcRoot = selectedNPC.HumanoidRootPart
+            local humanoid = selectedNPC:FindFirstChildOfClass("Humanoid")
+            local playerRoot = char.HumanoidRootPart
+
+            -- Sigue detrás del jugador
+            local targetPos = playerRoot.Position - playerRoot.CFrame.LookVector * 4
+            humanoid:MoveTo(targetPos)
+        end
+    end)
+end
+
+
+-- Botón para activar follow
+TabNPC:Button({
+    Title = "Start Following",
+    Desc = "El NPC seleccionado te seguirá",
+    Callback = function()
+        if not selectedNPC then
+            print("No hay NPC seleccionado")
+            return
+        end
+
+        followRunning = true
+        FollowNPC()
+    end
+})
+
+
+-- Botón para detener follow
+TabNPC:Button({
+    Title = "Stop Following",
+    Desc = "Detiene el seguimiento",
+    Callback = function()
+        followRunning = false
+    end
+})
+
+
+-- TELEPORT NPC AL JUGADOR
+TabNPC:Button({
+    Title = "Teleport NPC",
+    Desc = "Teletransporta el NPC seleccionado a ti",
+    Callback = function()
+        if not selectedNPC then
+            print("No hay NPC seleccionado")
+            return
+        end
+
+        local npcRoot = selectedNPC:FindFirstChild("HumanoidRootPart")
+        local char = game.Players.LocalPlayer.Character
+        local root = char and char:FindFirstChild("HumanoidRootPart")
+
+        if npcRoot and root then
+            npcRoot.CFrame = root.CFrame + Vector3.new(0, 3, 0)
+        end
+    end
+})
+
+
+
+-- =========================
+--       NPC KILL BUTTON
+-- =========================
+
+TabNPC:Button({
+    Title = "Kill NPC",
+    Desc = "Mata el NPC seleccionado",
+    Callback = function()
+        if not selectedNPC then
+            print("No NPC seleccionado")
+            return
+        end
+
+        local hum = selectedNPC:FindFirstChildOfClass("Humanoid")
+        if hum then
+            hum.Health = 0
+        end
+    end
+})
+
