@@ -412,25 +412,14 @@ local function getBox(part)
     return box
 end
 
--- Detectar si la parte se puede mover
+-- Detectar si la parte se puede mover SIN tocar su CFrame
 local function isMoveable(part)
+    if not part or not part:IsA("BasePart") then return false end
     if part.Anchored then return false end
-    if part.Mass == 0 then return false end
+    if part.Mass <= 0 then return false end
 
-    local original = part.CFrame
-
-    local success = pcall(function()
-        part.CFrame = original * CFrame.new(0, 0.05, 0)
-    end)
-
-    if not success or part.CFrame == original then
-        return false
-    end
-
-    -- restaurar
-    pcall(function()
-        part.CFrame = original
-    end)
+    local root = part.AssemblyRootPart
+    if not root or root.Anchored then return false end
 
     return true
 end
@@ -440,13 +429,23 @@ RunService.Heartbeat:Connect(function()
     local root = char and char:FindFirstChild("HumanoidRootPart")
     if not root then return end
 
+    -- Partes cercanas
     local nearby = Workspace:GetPartBoundsInRadius(root.Position, 20)
 
+    -- Crear / actualizar boxes
+    local validIds = {}
+
     for _, part in ipairs(nearby) do
-        if part:IsA("BasePart") then
-            if isMoveable(part) then
-                getBox(part)
-            end
+        if part:IsA("BasePart") and isMoveable(part) then
+            local box = getBox(part)
+            validIds[box.Name] = true
+        end
+    end
+
+    -- Eliminar SelectionBoxes que ya no deben existir
+    for _, box in ipairs(folder:GetChildren()) do
+        if not validIds[box.Name] then
+            box:Destroy()
         end
     end
 end)
