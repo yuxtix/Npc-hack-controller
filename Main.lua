@@ -376,3 +376,74 @@ TabNPC:Button({
     end
 })
 
+
+TabNPC:Button({
+    Title = "Scan all",
+    Desc = "Muestra las partes que puedes modificar",
+    Callback = function()
+       local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
+
+local player = Players.LocalPlayer
+
+-- Carpeta para highlights
+local highlightFolder = Instance.new("Folder")
+highlightFolder.Name = "MoveableHighlights"
+highlightFolder.Parent = player
+
+local function getHighlightFor(part)
+    local hl = highlightFolder:FindFirstChild(part:GetDebugId())
+    if not hl then
+        hl = Instance.new("Highlight")
+        hl.Name = part:GetDebugId()
+        hl.Adornee = part
+        hl.FillTransparency = 1
+        hl.OutlineTransparency = 0
+        hl.OutlineColor = Color3.fromRGB(0, 255, 0) -- siempre verde
+        hl.Parent = highlightFolder
+    end
+    return hl
+end
+
+-- Detecta si la parte se puede mover
+local function isMoveable(part)
+    if part.Anchored then return false end
+    if part.Mass == 0 then return false end
+
+    local original = part.CFrame
+
+    local success = pcall(function()
+        part.CFrame = part.CFrame * CFrame.new(0, 0.1, 0)
+    end)
+
+    if not success or part.CFrame == original then
+        return false
+    end
+
+    -- regresar
+    pcall(function()
+        part.CFrame = original
+    end)
+
+    return true
+end
+
+RunService.Heartbeat:Connect(function()
+    local char = player.Character
+    local root = char and char:FindFirstChild("HumanoidRootPart")
+    if not root then return end
+
+    local nearby = Workspace:GetPartBoundsInRadius(root.Position, 20)
+
+    for _, part in ipairs(nearby) do
+        if part:IsA("BasePart") then
+            if isMoveable(part) then
+                getHighlightFor(part)
+            end
+        end
+    end
+end)
+
+    end
+})
