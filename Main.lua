@@ -381,32 +381,38 @@ TabNPC:Button({
     Title = "Scan all",
     Desc = "Muestra las partes que puedes modificar",
     Callback = function()
-       local Players = game:GetService("Players")
+            local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
 local player = Players.LocalPlayer
 
--- Carpeta para highlights
-local highlightFolder = Instance.new("Folder")
-highlightFolder.Name = "MoveableHighlights"
-highlightFolder.Parent = player
+-- Carpeta para selection boxes
+local folder = Instance.new("Folder")
+folder.Name = "MoveableSelections"
+folder.Parent = workspace
 
-local function getHighlightFor(part)
-    local hl = highlightFolder:FindFirstChild(part:GetDebugId())
-    if not hl then
-        hl = Instance.new("Highlight")
-        hl.Name = part:GetDebugId()
-        hl.Adornee = part
-        hl.FillTransparency = 1
-        hl.OutlineTransparency = 0
-        hl.OutlineColor = Color3.fromRGB(0, 255, 0) -- siempre verde
-        hl.Parent = highlightFolder
+-- Devuelve / crea un SelectionBox para esa parte
+local function getBox(part)
+    local id = part:GetDebugId()
+    local box = folder:FindFirstChild(id)
+
+    if not box then
+        box = Instance.new("SelectionBox")
+        box.Name = id
+        box.Adornee = part
+        box.LineThickness = 0.05
+        box.SurfaceColor3 = Color3.fromRGB(0, 255, 0)
+        box.Color3 = Color3.fromRGB(0, 255, 0)
+        box.Transparency = 0.5
+        box.Visible = true
+        box.Parent = folder
     end
-    return hl
+
+    return box
 end
 
--- Detecta si la parte se puede mover
+-- Detectar si la parte se puede mover
 local function isMoveable(part)
     if part.Anchored then return false end
     if part.Mass == 0 then return false end
@@ -414,14 +420,14 @@ local function isMoveable(part)
     local original = part.CFrame
 
     local success = pcall(function()
-        part.CFrame = part.CFrame * CFrame.new(0, 0.1, 0)
+        part.CFrame = original * CFrame.new(0, 0.05, 0)
     end)
 
     if not success or part.CFrame == original then
         return false
     end
 
-    -- regresar
+    -- restaurar
     pcall(function()
         part.CFrame = original
     end)
@@ -439,11 +445,11 @@ RunService.Heartbeat:Connect(function()
     for _, part in ipairs(nearby) do
         if part:IsA("BasePart") then
             if isMoveable(part) then
-                getHighlightFor(part)
+                getBox(part)
             end
         end
     end
 end)
 
-    end
+        end
 })
