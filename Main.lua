@@ -283,6 +283,105 @@ TabNPC:Button({
     end
 })
 
+-- =========================
+--   NUEVAS FUNCIONALIDADES
+-- =========================
+
+local orbiting = false
+local possessing = false
+
+-- 1. ESCUDO HUMANO (Orbit)
+-- El NPC gira rápidamente alrededor de ti, actuando como un escudo visual/físico.
+TabNPC:Button({
+    Title = "Human Shield (Orbit)",
+    Desc = "El NPC gira a tu alrededor locamente",
+    Callback = function()
+        if not selectedNPC then return end
+        orbiting = not orbiting
+        
+        task.spawn(function()
+            local angle = 0
+            while orbiting and selectedNPC do
+                task.wait()
+                local char = game.Players.LocalPlayer.Character
+                local root = char and char:FindFirstChild("HumanoidRootPart")
+                local npcRoot = selectedNPC:FindFirstChild("HumanoidRootPart")
+                
+                if root and npcRoot then
+                    angle = angle + 0.2 -- Velocidad de giro
+                    local offset = Vector3.new(math.cos(angle) * 7, 2, math.sin(angle) * 7)
+                    npcRoot.CFrame = CFrame.new(root.Position + offset, root.Position)
+                    -- Forzamos la velocidad para que el servidor valide el movimiento
+                    npcRoot.Velocity = Vector3.new(0, 50, 0) 
+                end
+            end
+        end)
+    end
+})
+
+-- 2. CONTROL REMOTO (Possess)
+-- Tu cámara se fija en el NPC y tus teclas de movimiento lo controlan a él.
+TabNPC:Button({
+    Title = "Possess NPC",
+    Desc = "Controla el movimiento del NPC (WASD)",
+    Callback = function()
+        if not selectedNPC or possessing then possessing = false return end
+        
+        possessing = true
+        local hum = selectedNPC:FindFirstChildOfClass("Humanoid")
+        local camera = workspace.CurrentCamera
+        
+        camera.CameraSubject = hum
+        
+        task.spawn(function()
+            while possessing and selectedNPC do
+                local moveDir = game.Players.LocalPlayer.Character.Humanoid.MoveDirection
+                hum:Move(moveDir, false)
+                task.wait()
+            end
+            camera.CameraSubject = game.Players.LocalPlayer.Character.Humanoid
+        end)
+    end
+})
+
+-- 3. LANZAR NPC (Yeet)
+-- Aplica una fuerza masiva para mandar al NPC al espacio.
+TabNPC:Button({
+    Title = "Yeet NPC",
+    Desc = "Manda al NPC a la estratosfera",
+    Callback = function()
+        if not selectedNPC then return end
+        local npcRoot = selectedNPC:FindFirstChild("HumanoidRootPart")
+        
+        if npcRoot then
+            -- Para que el servidor replique esto, a veces necesitamos "sentarnos" 
+            -- o tocar el NPC un milisegundo antes para ganar el Ownership.
+            npcRoot.CFrame = npcRoot.CFrame + Vector3.new(0, 2, 0)
+            task.wait(0.1)
+            npcRoot.Velocity = Vector3.new(0, 1000, 0) -- Impulso vertical masivo
+            npcRoot.RotVelocity = Vector3.new(50, 50, 50) -- Que gire locamente
+        end
+    end
+})
+
+-- 4. FUNCIÓN "BRING" MEJORADA (Loop Bring)
+-- Trae a todos los NPCs cercanos a tu posición continuamente (Caos total)
+TabNPC:Button({
+    Title = "Black Hole (Bring All)",
+    Desc = "Atrae a todos los NPCs cercanos hacia ti",
+    Callback = function()
+        for _, v in pairs(workspace:GetDescendants()) do
+            if v:IsA("Humanoid") and v.Parent ~= game.Players.LocalPlayer.Character then
+                local npcRoot = v.Parent:FindFirstChild("HumanoidRootPart")
+                local pRoot = game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+                if npcRoot and pRoot then
+                    npcRoot.CFrame = pRoot.CFrame
+                end
+            end
+        end
+    end
+})
+
 
 -- FOLLOW SYSTEM
 local function FollowNPC()
@@ -377,6 +476,7 @@ TabNPC:Button({
 })
 
 
+
 TabNPC:Button({
     Title = "Scan all",
     Desc = "Muestra las partes que puedes modificar",
@@ -392,20 +492,24 @@ local folder = Instance.new("Folder")
 folder.Name = "MoveableSelections"
 folder.Parent = workspace
 
--- Devuelve / crea un SelectionBox para esa parte
+-- Devuelve / crea un highlight para esa parte
 local function getBox(part)
-    local id = part:GetDebugId()
+    -- Es mejor usar el nombre o una referencia, GetDebugId() es útil pero interno
+    local id = part:GetDebugId() 
     local box = folder:FindFirstChild(id)
 
     if not box then
-        box = Instance.new("SelectionBox")
+        box = Instance.new("Highlight")
         box.Name = id
-        box.Adornee = part
-        box.LineThickness = 0.05
-        box.SurfaceColor3 = Color3.fromRGB(0, 255, 0)
-        box.Color3 = Color3.fromRGB(0, 255, 0)
-        box.Transparency = 0.5
-        box.Visible = true
+        box.Adornee = part -- Si quieres resaltar solo la parte, usa 'part'. Si es el modelo, usa 'part.Parent'
+        
+        -- Propiedades correctas para Highlight:
+        box.OutlineColor = Color3.fromRGB(0, 255, 0) -- Color del borde
+        box.OutlineTransparency = 0.05              -- Transparencia del borde
+        box.FillColor = Color3.fromRGB(0, 255, 0)    -- Color del relleno
+        box.FillTransparency = 0.5                  -- Transparencia del relleno (0 es opaco, 1 es invisible)
+        
+        box.Enabled = true -- En Highlight se usa 'Enabled' en lugar de 'Visible'
         box.Parent = folder
     end
 
