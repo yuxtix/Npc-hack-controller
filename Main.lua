@@ -475,6 +475,23 @@ TabNPC:Button({
     end
 })
 
+local Keybind = TabNPC:Keybind({
+    Title = "KIll npc",
+    Desc = "Tecla para matar al npc",
+	Icon = "move-3d",
+    Value = "",
+    Callback = function(v)
+		if not selectedNPC then
+            print("No NPC seleccionado")
+            return
+        end
+
+        local hum = selectedNPC:FindFirstChildOfClass("Humanoid")
+        if hum then
+            hum.Health = 0
+        end
+    end
+})
 
 
 TabNPC:Button({
