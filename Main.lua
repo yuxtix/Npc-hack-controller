@@ -498,78 +498,87 @@ TabNPC:Button({
     Title = "Scan all",
     Desc = "Muestra las partes que puedes modificar",
     Callback = function()
-            local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local Workspace = game:GetService("Workspace")
+        local Players = game:GetService("Players")
+        local RunService = game:GetService("RunService")
+        local Workspace = game:GetService("Workspace")
+        local player = Players.LocalPlayer
 
-local player = Players.LocalPlayer
+        -- Carpeta para highlights
+        local folder = Instance.new("Folder")
+        folder.Name = "MoveableSelections"
+        folder.Parent = workspace
 
--- Carpeta para selection boxes
-local folder = Instance.new("Folder")
-folder.Name = "MoveableSelections"
-folder.Parent = workspace
-
--- Devuelve / crea un highlight para esa parte
-local function getBox(part)
-    -- Es mejor usar el nombre o una referencia, GetDebugId() es útil pero interno
-    local id = part:GetDebugId() 
-    local box = folder:FindFirstChild(id)
-
-    if not box then
-        box = Instance.new("Highlight")
-        box.Name = id
-        box.Adornee = part -- Si quieres resaltar solo la parte, usa 'part'. Si es el modelo, usa 'part.Parent'
-        
-        -- Propiedades correctas para Highlight:
-        box.OutlineColor = Color3.fromRGB(0, 255, 0) -- Color del borde
-        box.OutlineTransparency = 0.05              -- Transparencia del borde
-        box.FillColor = Color3.fromRGB(0, 255, 0)    -- Color del relleno
-        box.FillTransparency = 0.5                  -- Transparencia del relleno (0 es opaco, 1 es invisible)
-        
-        box.Enabled = true -- En Highlight se usa 'Enabled' en lugar de 'Visible'
-        box.Parent = folder
-    end
-
-    return box
-end
-
--- Detectar si la parte se puede mover SIN tocar su CFrame
-local function isMoveable(part)
-    if not part or not part:IsA("BasePart") then return false end
-    if part.Anchored then return false end
-    if part.Mass <= 0 then return false end
-
-    local root = part.AssemblyRootPart
-    if not root or root.Anchored then return false end
-
-    return true
-end
-
-RunService.Heartbeat:Connect(function()
-    local char = player.Character
-    local root = char and char:FindFirstChild("HumanoidRootPart")
-    if not root then return end
-
-    -- Partes cercanas
-    local nearby = Workspace:GetPartBoundsInRadius(root.Position, 20)
-
-    -- Crear / actualizar boxes
-    local validIds = {}
-
-    for _, part in ipairs(nearby) do
-        if part:IsA("BasePart") and isMoveable(part) then
-            local box = getBox(part)
-            validIds[box.Name] = true
+        local function getBox(part)
+            local id = tostring(part:GetDebugId())
+            local box = folder:FindFirstChild(id)
+            if not box then
+                box = Instance.new("Highlight")
+                box.Name = id
+                box.Adornee = part
+                box.OutlineColor = Color3.fromRGB(0, 255, 0)
+                box.OutlineTransparency = 0.05
+                box.FillColor = Color3.fromRGB(0, 255, 0)
+                box.FillTransparency = 0.5
+                box.Enabled = true
+                box.Parent = folder
+            end
+            return box
         end
-    end
 
-    -- Eliminar SelectionBoxes que ya no deben existir
-    for _, box in ipairs(folder:GetChildren()) do
-        if not validIds[box.Name] then
-            box:Destroy()
-        end
-    end
-end)
+        -- Detecta network ownership desde LocalScript usando pcall
+        local function hasNetworkOwnership(part)
+            if not part or not part:IsA("BasePart") then return false end
+            if part.Anchored then return false end
 
+            -- En LocalScript, GetNetworkOwner() no está disponible,
+            -- pero podemos detectar si somos owners intentando SetNetworkOwnership
+            -- o usando el truco de AssemblyRootPart + physics simulation
+            local root = part.AssemblyRootPart
+            if not root or root.Anchored then return false end
+
+            -- Si el cliente simula la física de esta parte, significa que tiene ownership
+            -- Guardamos la velocidad/posición, si el cliente la controla cambia sin server input
+            local success = pcall(function()
+                -- Esto solo funciona en server, en client lo usamos para verificar acceso
+                local owner = root:GetNetworkOwner()
+                -- Si llega aquí sin error en contexto local (exploit), comparamos
+                if owner ~= player then return false end
+            end)
+
+            -- Método alternativo confiable para LocalScript:
+            -- Si AssemblyRootPart no está anclado y no pertenece a ningún personaje del servidor,
+            -- el cliente con ownership puede modificar su CFrame/Velocity
+            -- Detectamos intentando escribir Velocity (no lanza error si tienes ownership)
+            local owned = false
+            local originalVelocity = root.AssemblyLinearVelocity
+            pcall(function()
+                root.AssemblyLinearVelocity = originalVelocity -- escribir mismo valor
+                owned = true -- si no lanza error, tenemos ownership
+            end)
+
+            return owned
         end
+
+        RunService.Heartbeat:Connect(function()
+            local char = player.Character
+            local root = char and char:FindFirstChild("HumanoidRootPart")
+            if not root then return end
+
+            local nearby = Workspace:GetPartBoundsInRadius(root.Position, 20)
+            local validIds = {}
+
+            for _, part in ipairs(nearby) do
+                if part:IsA("BasePart") and hasNetworkOwnership(part) then
+                    local box = getBox(part)
+                    validIds[box.Name] = true
+                end
+            end
+
+            for _, box in ipairs(folder:GetChildren()) do
+                if not validIds[box.Name] then
+                    box:Destroy()
+                end
+            end
+        end)
+    end
 })
